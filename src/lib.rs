@@ -1,6 +1,10 @@
 //! The solana-program-test provides a BanksClient-based test framework SBF programs
 #![allow(clippy::arithmetic_side_effects)]
 
+use solana_sdk::{
+    account::ReadableAccount,
+    sysvar::instructions::{load_current_index_checked, load_instruction_at_checked},
+};
 // Export tokio for test clients
 pub use tokio;
 use {
@@ -433,6 +437,41 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
     fn sol_get_stack_height(&self) -> u64 {
         let invoke_context = get_invoke_context();
         invoke_context.get_stack_height().try_into().unwrap()
+    }
+
+    fn sol_get_processed_sibling_instruction(&self, index: usize) -> Option<Instruction> {
+        let invoke_context = get_invoke_context();
+        let instructions_sysvar_id =
+            Pubkey::from_str_const("Sysvar1nstructions1111111111111111111111111");
+        let instructions_sysvar_account_index = invoke_context
+            .transaction_context
+            .find_index_of_account(&instructions_sysvar_id)?;
+        let instructions_account = invoke_context
+            .transaction_context
+            .accounts()
+            .get(instructions_sysvar_account_index)?;
+        let ta = instructions_account.try_borrow().ok()?;
+        let mut a = Account {
+            data: ta.data().to_vec(),
+            executable: ta.executable(),
+            lamports: ta.lamports(),
+            owner: *ta.owner(),
+            rent_epoch: ta.rent_epoch(),
+        };
+        let ai = AccountInfo {
+            key: &instructions_sysvar_id,
+            is_signer: false,
+            is_writable: true,
+            lamports: std::rc::Rc::new(RefCell::new(&mut a.lamports)),
+            data: std::rc::Rc::new(RefCell::new(&mut a.data[..])),
+            owner: &a.owner,
+            executable: a.executable,
+            rent_epoch: a.rent_epoch,
+        };
+        let current_ix_index = load_current_index_checked(&ai).ok()? as usize;
+        // We're actually looking for current_index - index - 1
+        let index = current_ix_index.checked_sub(index)?.checked_sub(1)?;
+        Some(load_instruction_at_checked(index, &ai).ok()?)
     }
 }
 
