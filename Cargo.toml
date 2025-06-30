@@ -188,3 +188,9 @@ version = "=2.2.4"
 
 [dev-dependencies.test-case]
 version = "3.3.1"
+
+[dependencies.solana-transaction-context]
+git = "ssh://git@github.com/vlady-kotsev/solana-transaction-context.git"
+
+[patch.crates-io]
+solana-transaction-context = { git = "ssh://git@github.com/vlady-kotsev/solana-transaction-context.git" }

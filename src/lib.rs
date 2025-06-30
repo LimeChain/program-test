@@ -1,6 +1,8 @@
 //! The solana-program-test provides a BanksClient-based test framework SBF programs
 #![allow(clippy::arithmetic_side_effects)]
 
+use solana_sdk::{account::ReadableAccount, msg, sysvar::instructions as ix_var};
+
 // Export tokio for test clients
 pub use tokio;
 use {
@@ -414,6 +416,56 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
     fn sol_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
         let (program_id, data) = get_invoke_context().transaction_context.get_return_data();
         Some((*program_id, data.to_vec()))
+    }
+
+    fn sol_get_processed_sibling_instruction(&self, index: usize) -> Option<Instruction> {
+        let get_sibling_instruction_from_account_info =
+            |instructions_sysvar_account: &AccountInfo,
+             sibling_index: usize|
+             -> Result<Instruction, ProgramError> {
+                let current_index =
+                    ix_var::load_current_index_checked(instructions_sysvar_account)?;
+
+                if (sibling_index as u16) < current_index {
+                    let absolute_index = current_index as usize - 1 - sibling_index;
+
+                    ix_var::load_instruction_at_checked(absolute_index, instructions_sysvar_account)
+                } else {
+                    msg!("Error: Sibling index {} is out of bounds.", sibling_index);
+                    Err(ProgramError::InvalidArgument)
+                }
+            };
+
+        let invoke_context = get_invoke_context();
+        let transaction_context = &invoke_context.transaction_context;
+
+        let instructions_data = transaction_context
+            .get_instructions_sysvar_account()
+            .unwrap_or_default();
+
+        let instructions_account: Account = instructions_data.1.into();
+        let instructions_sysvar_pubkey = solana_sdk::sysvar::instructions::ID;
+        let mut lamports = instructions_account.lamports();
+        let mut data = instructions_account.data().to_vec();
+
+        let instructions_account_info = AccountInfo::new(
+            &instructions_sysvar_pubkey,
+            false,
+            true,
+            &mut lamports,
+            &mut data,
+            instructions_account.owner(),
+            instructions_account.executable(),
+            instructions_account.rent_epoch(),
+        );
+        let res = get_sibling_instruction_from_account_info(&instructions_account_info, index)
+            .expect("Cant get sibling");
+        println!(
+            "<PROGRAM_TEST> sol_get_processed_sibling_instruction: {:?}",
+            res
+        );
+
+        Some(res)
     }
 
     fn sol_set_return_data(&self, data: &[u8]) {

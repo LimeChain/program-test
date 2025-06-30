@@ -3,7 +3,7 @@ use solana_sdk::{
     bpf_loader,
     bpf_loader_upgradeable::{self, get_program_data_address, UpgradeableLoaderState},
     feature_set,
-    pubkey::{self, Pubkey},
+    pubkey::Pubkey,
     rent::Rent,
 };
 
