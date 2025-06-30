@@ -2,7 +2,6 @@
 #![allow(clippy::arithmetic_side_effects)]
 
 use solana_sdk::{
-    account::ReadableAccount,
     sysvar::instructions::{load_current_index_checked, load_instruction_at_checked},
 };
 // Export tokio for test clients
@@ -523,6 +522,7 @@ pub struct ProgramTest {
     prefer_bpf: bool,
     deactivate_feature_set: HashSet<Pubkey>,
     transaction_account_lock_limit: Option<usize>,
+    payer: Keypair,
 }
 
 impl Default for ProgramTest {
@@ -556,6 +556,7 @@ impl Default for ProgramTest {
             prefer_bpf,
             deactivate_feature_set: HashSet::default(),
             transaction_account_lock_limit: None,
+            payer: Keypair::new(),
         }
     }
 }
@@ -576,6 +577,11 @@ impl ProgramTest {
         let mut me = Self::default();
         me.add_program(program_name, program_id, builtin_function);
         me
+    }
+
+    /// Override default payer
+    pub fn set_payer(&mut self, payer: Keypair) {
+        self.payer = payer;
     }
 
     /// Override default SBF program selection
@@ -846,12 +852,11 @@ impl ProgramTest {
         let bootstrap_validator_stake_lamports =
             rent.minimum_balance(VoteState::size_of()) + sol_to_lamports(1_000_000.0);
 
-        let mint_keypair = Keypair::new();
         let voting_keypair = Keypair::new();
 
         let mut genesis_config = create_genesis_config_with_leader_ex(
             sol_to_lamports(1_000_000.0),
-            &mint_keypair.pubkey(),
+            &self.payer.pubkey(),
             &bootstrap_validator_pubkey,
             &voting_keypair.pubkey(),
             &Pubkey::new_unique(),
@@ -883,7 +888,7 @@ impl ProgramTest {
 
         let target_tick_duration = Duration::from_micros(100);
         genesis_config.poh_config = PohConfig::new_sleep(target_tick_duration);
-        debug!("Payer address: {}", mint_keypair.pubkey());
+        debug!("Payer address: {}", self.payer.pubkey());
         debug!("Genesis config: {}", genesis_config);
 
         let bank = Bank::new_with_paths(
@@ -957,7 +962,7 @@ impl ProgramTest {
             last_blockhash,
             GenesisConfigInfo {
                 genesis_config,
-                mint_keypair,
+                mint_keypair: self.payer.insecure_clone(),
                 voting_keypair,
                 validator_pubkey: bootstrap_validator_pubkey,
             },
