@@ -450,14 +450,8 @@ impl solana_sdk::program_stubs::SyscallStubs for SyscallStubs {
             .transaction_context
             .accounts()
             .get(instructions_sysvar_account_index)?;
-        let ta = instructions_account.try_borrow().ok()?;
-        let mut a = Account {
-            data: ta.data().to_vec(),
-            executable: ta.executable(),
-            lamports: ta.lamports(),
-            owner: *ta.owner(),
-            rent_epoch: ta.rent_epoch(),
-        };
+        let ta = instructions_account.try_borrow().ok()?.clone();
+        let mut a: Account = ta.into();
         let ai = AccountInfo {
             key: &instructions_sysvar_id,
             is_signer: false,
