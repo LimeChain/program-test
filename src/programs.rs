@@ -3,7 +3,7 @@ use solana_sdk::{
     bpf_loader,
     bpf_loader_upgradeable::{self, get_program_data_address, UpgradeableLoaderState},
     feature_set,
-    pubkey::{self, Pubkey},
+    pubkey::Pubkey,
     rent::Rent,
 };
 
@@ -40,11 +40,6 @@ static SPL_PROGRAMS: &[(Pubkey, Pubkey, &[u8])] = &[
         solana_sdk_ids::bpf_loader::ID,
         include_bytes!("programs/spl_associated_token_account-1.1.1.so"),
     ),
-    // (
-    //     Pubkey::from_str_const("4L3tnynS4uSZbgyUDcKe9mwZcs8t2tGo1V1LbSpnu7XD"),
-    //     solana_sdk_ids::bpf_loader_upgradeable::ID,
-    //     include_bytes!("programs/mymemo.so"),
-    // ),
 ];
 
 // Programs that were previously builtins but have been migrated to Core BPF.

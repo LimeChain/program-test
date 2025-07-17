@@ -1,9 +1,7 @@
 //! The solana-program-test provides a BanksClient-based test framework SBF programs
 #![allow(clippy::arithmetic_side_effects)]
 
-use solana_sdk::{
-    sysvar::instructions::{load_current_index_checked, load_instruction_at_checked},
-};
+use solana_sdk::sysvar::instructions::{load_current_index_checked, load_instruction_at_checked};
 // Export tokio for test clients
 pub use tokio;
 use {
@@ -92,7 +90,7 @@ pub enum ProgramTestError {
 thread_local! {
     static INVOKE_CONTEXT: RefCell<Option<usize>> = const { RefCell::new(None) };
 }
-pub fn set_invoke_context(new: &mut InvokeContext) {
+fn set_invoke_context(new: &mut InvokeContext) {
     INVOKE_CONTEXT.with(|invoke_context| unsafe {
         invoke_context.replace(Some(transmute::<&mut InvokeContext, usize>(new)))
     });
@@ -493,16 +491,6 @@ fn default_shared_object_dirs() -> Vec<PathBuf> {
     search_path
 }
 
-pub fn find_file_new(filename: &str) -> Option<PathBuf> {
-    if let Ok(mut dir) = std::env::current_dir() {
-        dir.push("cpi_programs");
-        let dir = dir.join(filename);
-        Some(dir)
-    } else {
-        None
-    }
-}
-
 pub fn read_file<P: AsRef<Path>>(path: P) -> Vec<u8> {
     let path = path.as_ref();
     let mut file = File::open(path)
@@ -682,7 +670,7 @@ impl ProgramTest {
         program_name: &'static str,
         program_id: &Pubkey,
     ) {
-        let program_file = find_file_new(&format!("{program_name}.so"))
+        let program_file = find_file(&format!("{program_name}.so"))
             .expect("Program file data not available for {program_name} ({program_id})");
         let elf = read_file(program_file);
         let program_accounts =
